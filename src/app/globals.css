@@ -575,6 +575,44 @@ kbd {
   text-transform: uppercase; /* keeps the Geist fallback consistent with the all-caps look */
 }
 
+/* Rainbow ring around the mic circle: a thin gradient border (Google palette) just outside
+   it that slowly rotates. The gradient angle is a registered property so it can animate. */
+@property --ring-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.logo::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  padding: 2.5px; /* thickness of the ring */
+  background: conic-gradient(from var(--ring-angle), #ea4335, #fbbc05, #34a853, #4285f4, #ea4335);
+  /* Mask trick: show the gradient only in the padding band, so it becomes a ring. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: ring-spin 4s linear infinite;
+}
+
+@keyframes ring-spin {
+  to {
+    --ring-angle: 360deg;
+  }
+}
+
+/* With "reduce motion" on it still turns, just much more slowly. */
+@media (prefers-reduced-motion: reduce) {
+  .logo::before {
+    animation-duration: 14s;
+  }
+}
+
 .btn.start {
   margin-top: 32px;
   min-width: 120px;
