@@ -613,6 +613,50 @@ kbd {
   }
 }
 
+/* "By Hklx" credit, pinned to the bottom center of the landing page. */
+.landing {
+  position: relative; /* so the credit below can be placed against the page bottom */
+}
+
+/* Written as ".landing > .by" (not just ".by") so it beats the generic ".landing > :not(...)"
+   rule above, which would otherwise force position: relative. */
+.landing > .by {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* "By" is thin and quiet. */
+.by span {
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* "Hklx" is the signature: a bold slanted script in the full text color. */
+.by a {
+  font-family: var(--font-signature), cursive;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--fg);
+  text-decoration: none;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
+}
+
+.by a:hover {
+  transform: rotate(-4deg) scale(1.08);
+  opacity: 0.8;
+}
+
 .btn.start {
   margin-top: 32px;
   min-width: 120px;

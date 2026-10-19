@@ -242,7 +242,7 @@ const DOODLES: Doodle[] = [
   // Small plus and a power button for texture.
   { x: 4, y: 34, size: 32, rotate: 15, depth: 1.3, plain: true, art: <path d="M32 14 L32 50 M14 32 L50 32" /> },
   {
-    x: 47, y: 92, size: 40, rotate: 0, depth: 1, plain: true,
+    x: 63, y: 83, size: 40, rotate: 0, depth: 1, plain: true,
     art: <path d="M32 8 L32 30 M20 16 C10 24 10 42 22 50 C30 56 42 54 48 46 C54 38 52 24 44 16" />,
   },
 ];

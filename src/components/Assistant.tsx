@@ -337,6 +337,12 @@ export function Assistant() {
           <p className="hint">
             <kbd>Space</kbd> to start, then hold to talk
           </p>
+          <p className="by">
+            <span>By</span>
+            <a href="https://hklx.vercel.app/" target="_blank" rel="noopener noreferrer">
+              Hklx
+            </a>
+          </p>
         </div>
       </div>
     );
