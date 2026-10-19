@@ -3,8 +3,8 @@ import { fetchSpeech } from "./api";
 import { cleanForSpeech } from "./sentences";
 
 interface SpeakerEvents {
-  /** A sentence just started playing. */
-  onStart(): void;
+  /** A sentence just started playing; `tag` is whatever was passed to enqueue() for it. */
+  onStart(tag: number): void;
   /** Something failed (e.g. TTS down). Playback carries on with the next sentence. */
   onError(message: string): void;
 }
@@ -19,7 +19,7 @@ interface SpeakerEvents {
  * Make one Speaker per reply; `cancel()` makes it unusable.
  */
 export class Speaker {
-  private queue: Promise<ArrayBuffer | null>[] = []; // audio downloads, in speaking order
+  private queue: { audio: Promise<ArrayBuffer | null>; tag: number }[] = []; // in speaking order
   private running = false;
   private cancelled = false;
   private waiters: (() => void)[] = [];
@@ -30,15 +30,18 @@ export class Speaker {
     private events: SpeakerEvents,
   ) {}
 
-  /** Add a sentence to the end of the queue. */
-  enqueue(sentence: string): void {
+  /**
+   * Add a sentence to the end of the queue. `tag` is handed back to onStart when
+   * this sentence begins, so the UI can highlight how far along the reply is.
+   */
+  enqueue(sentence: string, tag = 0): void {
     const text = cleanForSpeech(sentence);
     if (this.cancelled || !/[\p{L}\p{N}]/u.test(text)) return; // nothing speakable
     const download = fetchSpeech(text, this.abort.signal).catch((err) => {
       if (!this.cancelled) this.events.onError(err instanceof Error ? err.message : "Text-to-speech failed.");
       return null; // skip this sentence
     });
-    this.queue.push(download);
+    this.queue.push({ audio: download, tag });
     void this.pump();
   }
 
@@ -61,10 +64,11 @@ export class Speaker {
     if (this.running) return;
     this.running = true;
     while (this.queue.length > 0 && !this.cancelled) {
-      const audio = await this.queue.shift()!;
+      const { audio: download, tag } = this.queue.shift()!;
+      const audio = await download;
       if (!audio || this.cancelled) continue;
       try {
-        this.events.onStart();
+        this.events.onStart(tag);
         await this.engine.play(audio);
       } catch {
         this.events.onError("Couldn't play the audio in this browser.");

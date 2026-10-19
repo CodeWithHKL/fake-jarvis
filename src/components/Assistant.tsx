@@ -19,6 +19,9 @@ const STATUS_LABEL: Record<Status, string> = {
   speaking: "Speaking",
 };
 
+/** Tappable prompts shown before the first question. */
+const STARTERS = ["Tell me a joke", "Give me a fun fact", "Explain something simply", "Hype me up"];
+
 /** True when the keyboard focus is somewhere you'd type, so Space should type a space. */
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -33,6 +36,9 @@ export function Assistant() {
   const [muted, setMuted] = useState(false);
   const [started, setStarted] = useState(false); // false until the user starts the session
   const [sttOk, setSttOk] = useState(true);
+  // How many characters of the latest reply have been spoken so far. The caption
+  // brightens up to this point. Infinity means "all of it" (done, muted, or cancelled).
+  const [spoken, setSpoken] = useState(Infinity);
 
   // Things that must survive re-renders but shouldn't cause one are kept in refs.
   const engineRef = useRef<AudioEngine | null>(null);
@@ -52,7 +58,7 @@ export function Assistant() {
   // Keep refs in sync with state so event handlers always see the latest values.
   useEffect(() => {
     messagesRef.current = messages;
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight }); // keep newest history in view
   }, [messages]);
   useEffect(() => {
     mutedRef.current = muted;
@@ -72,6 +78,7 @@ export function Assistant() {
     chatAbortRef.current = null;
     speakerRef.current?.cancel();
     speakerRef.current = null;
+    setSpoken(Infinity); // show the whole (possibly partial) reply at full brightness
   }, []);
 
   const stopEverything = useCallback(() => {
@@ -96,6 +103,7 @@ export function Assistant() {
         .map(({ role, content }) => ({ role, content }));
       setMessages((m) => [...m, userMsg, replyMsg]);
       setStatus("thinking");
+      setSpoken(mutedRef.current ? Infinity : 0);
 
       const controller = new AbortController();
       chatAbortRef.current = controller;
@@ -106,7 +114,11 @@ export function Assistant() {
       const speaker = mutedRef.current
         ? null
         : new Speaker(getEngine(), {
-            onStart: () => isCurrent() && setStatus("speaking"),
+            onStart: (end) => {
+              if (!isCurrent()) return;
+              setStatus("speaking");
+              setSpoken(end); // this sentence is now being spoken, so light it up
+            },
             onError: (msg) => {
               if (!isCurrent() || ttsErrorShown) return;
               ttsErrorShown = true; // one banner is enough, not one per sentence
@@ -118,6 +130,12 @@ export function Assistant() {
 
       const splitter = new SentenceSplitter();
       let received = "";
+      let cursor = 0; // where the last queued sentence ended inside `received`
+      /** Queue a sentence, tagged with where it ends in the full reply text. */
+      const speak = (sentence: string) => {
+        cursor = received.indexOf(sentence, cursor) + sentence.length;
+        speaker?.enqueue(sentence, cursor);
+      };
       try {
         await streamChat(
           history,
@@ -125,12 +143,12 @@ export function Assistant() {
             received += chunk;
             setMessages((all) => all.map((m) => (m.id === replyMsg.id ? { ...m, content: received } : m)));
             // Every finished sentence goes straight to the speaker.
-            for (const sentence of splitter.push(chunk)) speaker?.enqueue(sentence);
+            for (const sentence of splitter.push(chunk)) speak(sentence);
           },
           controller.signal,
         );
         const rest = splitter.flush();
-        if (rest) speaker?.enqueue(rest);
+        if (rest) speak(rest);
         await speaker?.whenDone();
       } catch (err) {
         if (controller.signal.aborted) return; // we cancelled on purpose
@@ -142,6 +160,7 @@ export function Assistant() {
         if (isCurrent()) {
           chatAbortRef.current = null;
           speakerRef.current = null;
+          setSpoken(Infinity);
           setStatus("idle");
         }
       }
@@ -165,15 +184,21 @@ export function Assistant() {
     const engine = getEngine();
     void engine.unlock().catch(() => {});
     const speaker: Speaker = new Speaker(engine, {
-      onStart: () => speakerRef.current === speaker && setStatus("speaking"),
+      onStart: (end) => {
+        if (speakerRef.current !== speaker) return;
+        setStatus("speaking");
+        setSpoken(end);
+      },
       onError: (msg) => speakerRef.current === speaker && setError(msg),
     });
     speakerRef.current = speaker;
     setStatus("thinking"); // while the greeting audio downloads
-    speaker.enqueue(greeting);
+    setSpoken(0);
+    speaker.enqueue(greeting, greeting.length);
     void speaker.whenDone().then(() => {
       if (speakerRef.current === speaker) {
         speakerRef.current = null;
+        setSpoken(Infinity);
         setStatus("idle");
       }
     });
@@ -315,26 +340,71 @@ export function Assistant() {
     );
   }
 
+  // The latest exchange (your last question + Jarvis's answer) is the focus of the
+  // screen; everything before it is shown small and faded above.
+  const lastUser = messages.findLastIndex((m) => m.role === "user");
+  const older = messages.slice(0, Math.max(lastUser, 0));
+  const current = messages.slice(Math.max(lastUser, 0));
+  const question = current.find((m) => m.role === "user");
+  const reply = current.findLast((m) => m.role === "assistant");
+
+  // Before the first question, offer a few things to try (handy when there's no mic).
+  const showChips = messages.length <= 1 && status === "idle";
+
+  // What the big caption says right now.
+  let caption: React.ReactNode = null;
+  if (listening) {
+    caption = interim || <span className="faint">Listening…</span>;
+  } else if (reply?.content.trim()) {
+    // Spoken part at full brightness, the rest dimmed until the voice gets there.
+    const text = reply.content.trim();
+    const cut = Math.min(spoken, text.length);
+    caption = (
+      <>
+        {text.slice(0, cut)}
+        <span className="faint">{text.slice(cut)}</span>
+      </>
+    );
+  } else if (status === "thinking") {
+    caption = <span className="faint">Thinking…</span>;
+  }
+
   return (
     <div className="assistant">
-      <div className="log" ref={logRef} aria-live="polite">
-        {messages.map((m) => (
-          <div key={m.id} className={`msg ${m.role}`}>
-            <span className="who">{m.role === "user" ? "You" : "Jarvis"}</span>
-            <p>{m.content.trim() || "…"}</p>
-          </div>
-        ))}
+      {older.length > 0 && (
+        <div className="history" ref={logRef}>
+          {older.map((m) => (
+            <p key={m.id} className={m.role}>
+              <span>{m.role === "user" ? "You" : "Jarvis"}</span> {m.content.trim()}
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className="stage">
+        <Visualizer getAnalyser={getAnalyser} mode={status} />
+        <div className="caption" aria-live="polite">
+          {question && !listening && <p className="said">“{question.content}”</p>}
+          <p className="reply">{caption}</p>
+        </div>
       </div>
 
       <div className="dock">
-        <Visualizer getAnalyser={getAnalyser} mode={status} />
+        {showChips && (
+          <div className="chips">
+            {STARTERS.map((s) => (
+              <button key={s} type="button" className="chip" onClick={() => void submit(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="status-row">
           <span className={`status ${status}`}>
             <i className="dot" />
             {STATUS_LABEL[status]}
           </span>
-          <span className="interim">{listening ? interim : ""}</span>
           <button type="button" className="link" onClick={toggleMuted} aria-pressed={muted}>
             {muted ? "Voice off" : "Voice on"}
           </button>

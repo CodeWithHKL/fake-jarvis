@@ -34,6 +34,7 @@ export function Visualizer({ getAnalyser, mode }: Props) {
     const levels = new Float32Array(BARS); // current height of each bar, 0..1
     let data: Uint8Array<ArrayBuffer> | null = null;
     let frame = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // Keep the canvas sharp on high-DPI screens.
     const resize = () => {
@@ -76,12 +77,17 @@ export function Visualizer({ getAnalyser, mode }: Props) {
         } else if (mode === "thinking") {
           // a gentle traveling wave while waiting for the model
           target = 0.12 + 0.1 * Math.sin(time / 260 - i * 0.45);
+        } else {
+          // Resting shape: a soft wave that gently breathes. With "reduce motion"
+          // turned on in the OS, time is frozen so it stays a still, soft wave.
+          const t = reducedMotion ? 0 : time;
+          target = 0.09 + 0.06 * Math.sin(t / 900 - i * 0.3);
         }
         levels[i] += (target - levels[i]) * 0.3; // ease toward the target
 
         const barHeight = Math.max(minHeight, levels[i] * height * 0.95);
         const x = i * slot + (slot - barWidth) / 2;
-        ctx.globalAlpha = live || mode === "thinking" ? 1 : 0.3;
+        ctx.globalAlpha = live || mode === "thinking" ? 1 : 0.35;
         ctx.beginPath();
         ctx.roundRect(x, (height - barHeight) / 2, barWidth, barHeight, barWidth / 2);
         ctx.fill();
