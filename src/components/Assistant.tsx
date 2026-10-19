@@ -329,7 +329,13 @@ export function Assistant() {
           <span className="logo">
             <i className="mic-icon" />
           </span>
-          <h1>Jarvis</h1>
+          <div className="title-block">
+            <h1>Jarvis</h1>
+            <svg className="underline" width="100%" height="6" aria-hidden="true">
+              {/* Percent coordinates make the line exactly as wide as the title above it. */}
+              <line x1="1%" y1="3" x2="99%" y2="3" pathLength="100" />
+            </svg>
+          </div>
           <p className="muted">A fake Jarvis at your service.</p>
           <button type="button" className="btn primary start" onClick={startSession}>
             Start

@@ -565,8 +565,35 @@ kbd {
   border-radius: 50%;
 }
 
+/* The title plus the dashed line under it, kept together as one block. */
+.title-block {
+  margin: 24px 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px; /* small gap, so the line sits right under the letters like an underline */
+}
+
+/* A straight dashed line in the text color (black in light mode, white in dark mode).
+   Round line caps give every dash the soft, rounded ends of an Excalidraw stroke. */
+.underline {
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  /* As wide as the title, but never wider. An SVG's own width would otherwise stretch the
+     block (default 300px), so it starts at 0 and the min-width grows it to the title's width. */
+  width: 0;
+  min-width: 100%;
+  /* The line is declared as 100 units long (pathLength="100" in the markup), so these numbers are
+     relative to its width: 20 dashes and 19 gaps fill it exactly, starting and ending on a dash. */
+  stroke-dasharray: 1.9 3.263;
+}
+
 .landing h1 {
-  margin: 24px 0 12px;
+  margin: 0;
   font-family: var(--font-display), var(--font-sans), sans-serif; /* Anton */
   font-size: 64px;
   font-weight: 400; /* Anton only has one weight; a bolder value would be faked by the browser */
