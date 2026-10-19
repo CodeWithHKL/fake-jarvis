@@ -278,11 +278,13 @@ kbd {
 }
 
 .landing h1 {
-  margin: 24px 0 4px;
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
+  margin: 24px 0 12px;
+  font-family: var(--font-display), var(--font-sans), sans-serif; /* Anton */
+  font-size: 64px;
+  font-weight: 400; /* Anton only has one weight; a bolder value would be faked by the browser */
+  letter-spacing: 0.04em; /* all-caps display type looks better slightly open */
+  line-height: 1;
+  text-transform: uppercase; /* keeps the Geist fallback consistent with the all-caps look */
 }
 
 .btn.start {

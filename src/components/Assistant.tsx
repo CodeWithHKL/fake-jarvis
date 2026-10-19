@@ -328,7 +328,7 @@ export function Assistant() {
             <i className="mic-icon" />
           </span>
           <h1>Jarvis</h1>
-          <p className="muted">A voice assistant. Just talk.</p>
+          <p className="muted">A fake Jarvis at your service.</p>
           <button type="button" className="btn primary start" onClick={startSession}>
             Start
           </button>
