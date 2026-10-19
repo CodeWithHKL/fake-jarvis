@@ -268,6 +268,90 @@ kbd {
   text-align: center;
 }
 
+/* Everything on the landing page sits above the doodle layer. */
+.landing > :not(.doodles) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Doodle background ---------- */
+.doodles {
+  position: fixed; /* full-screen, even though the page content is a narrow column */
+  inset: 56px 0 0; /* start below the header */
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none; /* clicks pass through, except on the doodles themselves */
+}
+
+.doodle {
+  position: absolute;
+  will-change: transform; /* moved every frame by JavaScript */
+}
+
+.doodle-float {
+  width: 100%;
+  height: 100%;
+  color: var(--muted);
+  opacity: 0.4;
+  pointer-events: auto; /* so hovering a doodle can make it wiggle */
+  animation: float var(--dur) ease-in-out var(--delay) infinite;
+  transition:
+    opacity 0.2s,
+    color 0.2s;
+}
+
+.doodle-float:hover {
+  opacity: 0.95;
+  color: var(--fg);
+}
+
+.doodle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  rotate: var(--r);
+}
+
+.doodle-float:hover svg {
+  animation: wiggle 0.6s ease-in-out;
+}
+
+@keyframes float {
+  50% {
+    translate: 0 -8px;
+  }
+}
+
+@keyframes wiggle {
+  25% {
+    rotate: calc(var(--r) - 10deg);
+  }
+  75% {
+    rotate: calc(var(--r) + 10deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .doodle {
+    scale: 0.65; /* smaller doodles so they don't crowd a narrow screen */
+  }
+}
+
+/* Reduce-motion users keep the cursor-driven movement (it only happens when they
+   move the mouse) but lose the automatic bobbing and wiggling. */
+@media (prefers-reduced-motion: reduce) {
+  .doodle-float,
+  .doodle-float:hover svg {
+    animation: none;
+  }
+}
+
 .logo {
   width: 56px;
   height: 56px;

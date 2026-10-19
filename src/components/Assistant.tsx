@@ -7,6 +7,7 @@ import { pickGreeting } from "@/lib/greetings";
 import { SentenceSplitter } from "@/lib/client/sentences";
 import { Speaker } from "@/lib/client/speaker";
 import { createRecognizer, isSttSupported, type Recognizer } from "@/lib/client/stt";
+import { DoodleBackground } from "./DoodleBackground";
 import { Visualizer } from "./Visualizer";
 
 type Status = "idle" | "listening" | "thinking" | "speaking";
@@ -324,6 +325,7 @@ export function Assistant() {
     return (
       <div className="assistant">
         <div className="landing">
+          <DoodleBackground />
           <span className="logo">
             <i className="mic-icon" />
           </span>
