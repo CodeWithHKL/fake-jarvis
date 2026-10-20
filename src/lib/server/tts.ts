@@ -14,8 +14,16 @@ export const MAX_TTS_CHARS = 1000;
 /** If Microsoft's service stalls, fail instead of hanging the request until Vercel kills it. */
 const TIMEOUT_MS = 15_000;
 
-/** Convert text to MP3 bytes. */
+/** Convert text to MP3 bytes. Edge's service fails now and then, so try twice. */
 export async function synthesize(text: string): Promise<Buffer> {
+  try {
+    return await synthesizeOnce(text);
+  } catch {
+    return synthesizeOnce(text);
+  }
+}
+
+async function synthesizeOnce(text: string): Promise<Buffer> {
   // `generate` returns its own result (no shared state), so several
   // sentences can be synthesized at the same time safely.
   const tts = new EdgeTTS();

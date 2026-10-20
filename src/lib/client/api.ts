@@ -53,6 +53,15 @@ export async function streamChat(
 
 /** Ask /api/tts to turn one sentence into MP3 bytes. */
 export async function fetchSpeech(text: string, signal: AbortSignal): Promise<ArrayBuffer> {
+  try {
+    return await fetchSpeechOnce(text, signal);
+  } catch (err) {
+    if (signal.aborted) throw err;
+    return fetchSpeechOnce(text, signal); // mobile networks drop requests; one retry
+  }
+}
+
+async function fetchSpeechOnce(text: string, signal: AbortSignal): Promise<ArrayBuffer> {
   let res: Response;
   try {
     res = await fetch("/api/tts", {

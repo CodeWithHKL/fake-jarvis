@@ -61,6 +61,8 @@ export class AudioEngine {
   /** Play MP3 bytes. Resolves when playback ends (or is stopped). */
   async play(mp3: ArrayBuffer): Promise<void> {
     const ctx = this.ensure();
+    // Phones suspend the context while the mic/recognizer is in use; wake it up.
+    if (ctx.state !== "running") await ctx.resume().catch(() => {});
     const buffer = await ctx.decodeAudioData(mp3);
     return new Promise((resolve) => {
       const src = ctx.createBufferSource();

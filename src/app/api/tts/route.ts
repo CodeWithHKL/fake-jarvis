@@ -13,7 +13,8 @@ export async function POST(req: Request) {
     return new Response(new Uint8Array(audio), {
       headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
     });
-  } catch {
+  } catch (err) {
+    console.error("TTS failed:", err);
     return Response.json({ error: "Text-to-speech failed." }, { status: 502 });
   }
 }

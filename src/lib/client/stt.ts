@@ -87,7 +87,10 @@ export function createRecognizer(handlers: RecognizerHandlers): Recognizer {
 
   const rec = new Ctor();
   rec.lang = "en-US";
-  rec.continuous = true; // keep listening while the key is held, not just one phrase
+  // Android Chrome's continuous mode repeats words (each result re-contains the
+  // earlier ones), so on touch devices listen for one phrase at a time instead.
+  const isTouch = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+  rec.continuous = !isTouch; // keep listening while the key is held, not just one phrase
   rec.interimResults = true; // give us partial text as the person speaks
 
   let text = "";
@@ -95,8 +98,19 @@ export function createRecognizer(handlers: RecognizerHandlers): Recognizer {
   let aborted = false;
 
   rec.onresult = (e) => {
-    // `results` holds every phrase heard so far; join them into one string.
-    text = Array.from(e.results, (r) => r[0].transcript).join(" ").trim();
+    // `results` holds every phrase heard so far. Some mobile browsers report
+    // cumulative results ("hello", "hello world"), so a result that extends or
+    // repeats the previous one replaces it instead of being appended.
+    const parts: string[] = [];
+    for (const r of Array.from(e.results)) {
+      const part = r[0].transcript.trim();
+      if (!part) continue;
+      const prev = parts[parts.length - 1]?.toLowerCase();
+      const cur = part.toLowerCase();
+      if (prev !== undefined && cur.startsWith(prev)) parts[parts.length - 1] = part;
+      else if (prev === undefined || !prev.startsWith(cur)) parts.push(part);
+    }
+    text = parts.join(" ");
     handlers.onInterim(text);
   };
   rec.onerror = (e) => {
