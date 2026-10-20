@@ -225,7 +225,11 @@ export function Assistant() {
     const engine = getEngine();
     void engine.unlock().catch(() => {});
     // The mic feeds the visualizer. If this fails, recognition still works.
-    engine.startMic().catch(() => {});
+    // Phones only let one thing use the mic at a time: if we grab it for the
+    // visualizer, speech recognition hears silence. So skip it on touch devices.
+    const isTouch =
+      navigator.maxTouchPoints > 0 && window.matchMedia("(pointer: coarse)").matches;
+    if (!isTouch) engine.startMic().catch(() => {});
 
     const finishWith = (text: string) => {
       hold.current.active = false;
